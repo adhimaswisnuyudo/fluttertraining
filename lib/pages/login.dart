@@ -1,9 +1,14 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:page_transition/page_transition.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:training/helpers/mycolors.dart' as mycolor;
+import 'package:http/http.dart' as http;
+import 'package:training/helpers/constanta.dart' as myconstanta;
 
 import 'home.dart';
 
@@ -17,11 +22,63 @@ class _LoginState extends State<Login>{
   TextEditingController usernameCtrl = new TextEditingController();
   TextEditingController passwordCtrl = new TextEditingController();
   late DateTime currentBackPressTime;
+  bool isLoading = false;
+  String loginInfo="";
 
-  void loginAction(){
+  Future<void> loginAction() async{
     String username = usernameCtrl.text??"";
     String password = passwordCtrl.text??"";
-    Navigator.pushReplacement(context,PageTransition(type: PageTransitionType.bottomToTop,child: Home()));
+    try{
+      setState(() {
+        isLoading = true;
+        loginInfo = "Tunggu Sebentar...";
+      });
+      final request = await http.post(
+        Uri.parse(myconstanta.LOGINURL),
+        headers: {'token':myconstanta.TOKENHEADER},
+        body: {'username':username,'password':password}
+      );
+      // print(request.body.toString());
+      if(request.statusCode==200){
+        setState(() {
+          isLoading = false;
+          loginInfo = "";
+        });
+        final response = jsonDecode(request.body);
+        bool isLogin = response['isLogin'];
+        if(isLogin==true){
+          String username = response['username'];
+          String userid = response['userid'];
+          String fullname = response['fullname'];
+          SharedPreferences sp = await SharedPreferences.getInstance();
+          setState(() {
+            sp.setBool('isLogin',isLogin);
+            sp.setString('username', username);
+            sp.setString('fullname', fullname);
+            sp.setString('userid', userid);
+            Navigator.pushReplacement(context,PageTransition(type: PageTransitionType.bottomToTop,child: Home()));
+          });
+        }
+        else{
+          setState(() {
+            loginInfo = response['message'];
+          });
+        }
+
+      }
+      else{
+        Fluttertoast.showToast(msg:"HTTP REQUEST ERROR");
+      }
+    }
+    on HttpException{
+      print("MAAF, HTTP ERROR");
+    }
+    on SocketException{
+      print("MAAF, SOCKET ERROR");
+    }
+    on FormatException{
+      print("MAAF, FORMAT ERROR");
+    }
   }
 
 
@@ -29,7 +86,7 @@ class _LoginState extends State<Login>{
     double deviceWidth = MediaQuery.of(context).size.width;
     return Scaffold(
       backgroundColor: mycolor.WARNAUTAMA,
-      body: WillPopScope(
+      body: isLoading?Center(child: SpinKitCircle(color:Colors.white)):WillPopScope(
         onWillPop: onWillPop,
         child: ListView(
           children: <Widget>[
@@ -116,6 +173,10 @@ class _LoginState extends State<Login>{
                             ),
                           ),
                         ),
+                        SizedBox(height: 20),
+                        Container(child:
+                          Text(loginInfo,style: TextStyle(color:Colors.red,fontSize: 12))
+                        )
                       ],
                     ),
                   )

@@ -5,6 +5,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:training/pages/home.dart';
 import 'package:training/pages/login.dart';
 import 'package:training/helpers/mycolors.dart' as mycolor;
 
@@ -21,13 +23,26 @@ class _SplashScreenState extends State<SplashScreen>{
     redirect();
   }
 
-  void redirect(){
-    Timer(Duration(seconds: 2),()=>
-    Navigator.pushReplacement(context,
-        MaterialPageRoute(builder:(context)=>
-            Login())
-        )
-    );
+  void redirect() async{
+    SharedPreferences sp = await SharedPreferences.getInstance();
+    var isLogin = sp.getBool("isLogin");
+    if(isLogin == true){
+      Timer(Duration(seconds: 2),()=>
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder:(context)=>
+                  Home())
+          )
+      );
+    }
+    else{
+      Timer(Duration(seconds: 2),()=>
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder:(context)=>
+                  Login())
+          )
+      );
+    }
+
   }
 
 
